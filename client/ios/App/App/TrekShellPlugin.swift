@@ -173,7 +173,9 @@ public class TrekShellPlugin: CAPPlugin, CAPBridgedPlugin, ASWebAuthenticationPr
                 nextName: nextName,
                 nextTime: call.getString("nextTime"),
                 done: call.getInt("done") ?? 0,
-                total: call.getInt("total") ?? 0
+                total: call.getInt("total") ?? 0,
+                navigateUrl: call.getString("navigateUrl"),
+                navigateLabel: call.getString("navigateLabel")
             )
             // Stale at the end of the day, so a forgotten one fades out on its own.
             let stale = Calendar.current.startOfDay(for: Date().addingTimeInterval(86_400))

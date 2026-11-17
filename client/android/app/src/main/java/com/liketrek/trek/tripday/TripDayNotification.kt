@@ -139,7 +139,27 @@ object TripDayNotification {
         builder.setStyle(style)
         // Before Android 16 the style falls back to nothing: the plain bar carries the progress.
         if (Build.VERSION.SDK_INT < 36) builder.setProgress(total, done, false)
+        safeNavigationUri(state.navigateUrl)?.let { navUri ->
+            val navIntent = Intent(Intent.ACTION_VIEW, navUri)
+            val navTap = PendingIntent.getActivity(
+                context,
+                ID + 1,
+                navIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            val label = state.navigateLabel?.takeIf { it.isNotBlank() } ?: "Navigate"
+            builder.addAction(0, label, navTap)
+        }
         return builder.build()
+    }
+
+    private fun safeNavigationUri(raw: String?): Uri? {
+        if (raw.isNullOrBlank()) return null
+        val uri = runCatching { Uri.parse(raw) }.getOrNull() ?: return null
+        return when (uri.scheme?.lowercase()) {
+            "geo", "https", "http" -> uri
+            else -> null
+        }
     }
 
     private fun parseColor(css: String): Int? = runCatching { android.graphics.Color.parseColor(css) }.getOrNull()

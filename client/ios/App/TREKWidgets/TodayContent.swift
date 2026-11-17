@@ -208,6 +208,8 @@ struct TripDayBanner: View {
     let nextTime: String?
     let done: Int
     let total: Int
+    var navigateUrl: URL? = nil
+    var navigateLabel: String? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -241,7 +243,20 @@ struct TripDayBanner: View {
                         Text(nextTime).font(Trek.number(18, .heavy)).foregroundStyle(.white)
                     }
                 }
-                DayStopProgress(done: done, total: total).padding(.top, 3)
+                HStack(alignment: .center, spacing: 10) {
+                    DayStopProgress(done: done, total: total)
+                    if let navigateUrl {
+                        Link(destination: navigateUrl) {
+                            Label(navigateLabel?.isEmpty == false ? navigateLabel! : "Navigate", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Trek.confirmed.opacity(0.28), in: Capsule())
+                        }
+                    }
+                }
+                .padding(.top, 3)
             }
         }
         .padding(16)

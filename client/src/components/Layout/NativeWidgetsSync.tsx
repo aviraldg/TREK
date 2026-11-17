@@ -146,6 +146,7 @@ export default function NativeWidgetsSync(): null {
   const { caps } = useNativeCapabilities();
   const timeFormat = useSettingsStore((s) => s.settings.time_format);
   const unit = useSettingsStore((s) => s.settings.temperature_unit);
+  const preferredNavApp = useSettingsStore((s) => s.settings.preferred_nav_app);
   /** The ids of the watch's ticks applied in this session, which the watch drops from its pending ones. */
   const applied = useRef<string[]>([]);
 
@@ -158,7 +159,10 @@ export default function NativeWidgetsSync(): null {
       const days = trip ? await offlineDb.days.where('trip_id').equals(trip.id).toArray() : [];
       const extra = trip ? await tripExtras(trip, days, context) : null;
       const plain = trip
-        ? todayOf(trip, days, context.today, (n, m) => t('native.widget.dayOf', { n, m }), context.time)
+        ? todayOf(trip, days, context.today, (n, m) => t('native.widget.dayOf', { n, m }), {
+            time: context.time,
+            preferredNavApp,
+          })
         : null;
       const day = plain ? withBookings(plain, extra?.reservations ?? [], context.today, context.time) : null;
       return { day, days, extra, snapshot: buildSnapshot(trip, day, labels(t), { ...extra?.extras, atlas }) };
@@ -211,7 +215,9 @@ export default function NativeWidgetsSync(): null {
       // The Live Activity from three hours before the day's first timed stop, not all day long.
       const minutes = now.getHours() * 60 + now.getMinutes();
       const live =
-        main.day && liveDayDue(main.day, minutes) ? tripDayState(main.day, minutes, t('native.widget.dayDone')) : null;
+        main.day && liveDayDue(main.day, minutes)
+          ? tripDayState(main.day, minutes, t('native.widget.dayDone'), t('native.widget.navigate'))
+          : null;
       await publishWidgets(main.snapshot, live, choices);
       await publishToWatch(hero, main, today);
     };
@@ -241,7 +247,7 @@ export default function NativeWidgetsSync(): null {
       void listener.then((handle) => handle.remove());
       void watchListener?.then((handle) => handle.remove());
     };
-  }, [caps, t, language, timeFormat, unit]);
+  }, [caps, t, language, timeFormat, unit, preferredNavApp]);
 
   return null;
 }

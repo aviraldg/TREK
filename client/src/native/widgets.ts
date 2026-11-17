@@ -1,9 +1,11 @@
-import type { Day, Reservation, Trip } from '../types';
+import type { AssignmentPlace, Day, Reservation, Trip } from '../types';
+import { getNavigationTargets } from '../components/Planner/placeNavigation';
+import { useSettingsStore } from '../store/settingsStore';
 import { getFlightLegs, getTrainLegs, usesStationRoute } from '../utils/flightLegs';
 import { splitReservationDateTime } from '../utils/formatters';
 import { heroTrip, sortTripsByRelevance } from '../utils/heroTrip';
 import { hasNativeFeature } from './capabilities';
-import { isNativeApp } from './platform';
+import { isNativeAndroid, isNativeApp, isNativeIos } from './platform';
 import { reportNativeFailure } from './reportFailure';
 import { TrekShell } from './trekShell';
 import { stopLook, type WidgetBooking, type WidgetPacking, type WidgetTodos } from './widgetExtras';
@@ -59,6 +61,8 @@ interface WidgetStop {
   symbol?: string | null;
   /** Minutes after midnight it ends, past midnight as 1440: a flight in the air is not done yet. */
   endMinutes?: number | null;
+  /** Direct navigation URL/URI for the stop, when it has a location. */
+  navigateUrl?: string;
 }
 
 interface SnapshotStop {
@@ -185,32 +189,79 @@ export function mergeByTime<T extends { minutes?: number | null }>(stops: T[], b
   return out;
 }
 
+function hasPlaceLocation(place: AssignmentPlace): boolean {
+  if (place.lat != null && place.lng != null) return true;
+  return Boolean(place.address?.trim() || place.google_place_id?.trim() || place.google_ftid?.trim());
+}
+
+function fallbackNavUrl(
+  place: AssignmentPlace,
+  targets: ReturnType<typeof getNavigationTargets>
+): string | undefined {
+  if (isNativeAndroid()) {
+    const geo = targets.find((t) => t.id === 'geo');
+    if (geo) return geo.url;
+    if (place.lat != null && place.lng != null) {
+      const name = place.name?.trim();
+      const label = name ? `(${encodeURIComponent(name)})` : '';
+      return `geo:${place.lat},${place.lng}?q=${place.lat},${place.lng}${label}`;
+    }
+  }
+  if (isNativeIos()) {
+    const apple = targets.find((t) => t.id === 'apple');
+    if (apple) return apple.url;
+  }
+  return targets[0]?.url;
+}
+
+/**
+ * Resolves the single-tap navigation URL for a stop, respecting `preferred_nav_app`
+ * and falling back to `geo:` on Android and Apple Maps on iOS.
+ */
+export function stopNavigateUrl(
+  place: AssignmentPlace | null | undefined,
+  preferredNavApp?: string | null
+): string | undefined {
+  if (!place || !hasPlaceLocation(place)) return undefined;
+  const preferred = preferredNavApp !== undefined ? preferredNavApp : useSettingsStore.getState().settings.preferred_nav_app;
+  const targets = getNavigationTargets(place);
+  if (targets.length === 0) return undefined;
+  if (preferred) {
+    const match = targets.find((t) => t.id === preferred);
+    if (match) return match.url;
+  }
+  return fallbackNavUrl(place, targets);
+}
+
 /** Today's day of the trip with its stops in plan order, if the trip runs today. */
 export function todayOf(
   trip: Trip,
   days: Day[],
   today: string,
   dayLabel: (index: number, total: number) => string,
-  formatTime: (time: string) => string
+  format: ((time: string) => string) | { time: (time: string) => string; preferredNavApp?: string | null }
 ): TripDay | null {
+  const formatTime = typeof format === 'function' ? format : format.time;
+  const preferredNavApp = typeof format === 'function' ? undefined : format.preferredNavApp;
   const ordered = days.filter((d) => d.trip_id === trip.id).sort((a, b) => (a.day_number ?? 0) - (b.day_number ?? 0));
   const index = ordered.findIndex((d) => (d.date ?? '').slice(0, 10) === today);
   if (index < 0) return null;
   const day = ordered[index];
   const stops = [...(day.assignments ?? [])]
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-    .flatMap((a): WidgetStop[] =>
-      a.place?.name
-        ? [
-            {
-              name: a.place.name,
-              time: a.place.place_time ? formatTime(a.place.place_time.slice(0, 5)) : null,
-              minutes: minutesOf(a.place.place_time),
-              ...stopLook(a.place.category),
-            },
-          ]
-        : []
-    );
+    .flatMap((a): WidgetStop[] => {
+      if (!a.place?.name) return [];
+      const navigateUrl = stopNavigateUrl(a.place, preferredNavApp);
+      return [
+        {
+          name: a.place.name,
+          time: a.place.place_time ? formatTime(a.place.place_time.slice(0, 5)) : null,
+          minutes: minutesOf(a.place.place_time),
+          ...stopLook(a.place.category),
+          ...(navigateUrl ? { navigateUrl } : {}),
+        },
+      ];
+    });
   return {
     tripTitle: trip.title,
     path: `/trips/${trip.id}`,
@@ -330,19 +381,29 @@ interface TripDayState {
   colors?: (string | null)[];
   done: number;
   total: number;
+  /** Direct navigation URL/URI for the next stop, omitted when not navigable. */
+  navigateUrl?: string;
+  /** Translated label for the "Navigate" quick action. */
+  navigateLabel?: string;
 }
 
 /**
  * The Live Activity's state: the first stop still ahead or still under way (a
  * flight in the air until it lands), else the last.
  */
-export function tripDayState(day: TripDay, nowMinutes: number, allDone: string): TripDayState {
+export function tripDayState(
+  day: TripDay,
+  nowMinutes: number,
+  allDone: string,
+  navigateLabel?: string
+): TripDayState {
   const timed = day.stops.filter((s) => s.minutes != null);
   const nextIndex = day.stops.findIndex(
     (s) => s.minutes != null && (s.minutes >= nowMinutes || (s.endMinutes != null && s.endMinutes > nowMinutes))
   );
   const done = nextIndex < 0 ? timed.length : day.stops.slice(0, nextIndex).filter((s) => s.minutes != null).length;
   const next = nextIndex >= 0 ? day.stops[nextIndex] : null;
+  const navigateUrl = next?.navigateUrl;
   return {
     tripTitle: day.tripTitle,
     path: day.path,
@@ -354,6 +415,7 @@ export function tripDayState(day: TripDay, nowMinutes: number, allDone: string):
     colors: day.stops.filter((s) => s.minutes != null).map((s) => s.color ?? null),
     done,
     total: timed.length,
+    ...(navigateUrl ? { navigateUrl, ...(navigateLabel ? { navigateLabel } : {}) } : {}),
   };
 }
 

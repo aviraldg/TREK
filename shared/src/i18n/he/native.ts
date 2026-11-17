@@ -121,6 +121,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': 'מחר',
   'native.widget.nothingPlanned': 'אין תוכניות להיום',
   'native.widget.dayDone': 'הכול הושלם להיום',
+  'native.widget.navigate': 'ניווט',
   'native.widget.noBookings': 'אין הזמנות קרובות',
   'native.widget.noTodos': 'לא נשאר מה לעשות',
   'native.widget.now': 'עכשיו',

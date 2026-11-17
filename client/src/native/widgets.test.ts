@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Day, Trip } from '../types';
 
-vi.mock('./platform', () => ({ isNativeIos: vi.fn(() => true), isNativeApp: vi.fn(() => true) }));
+vi.mock('./platform', () => ({
+  isNativeIos: vi.fn(() => true),
+  isNativeAndroid: vi.fn(() => false),
+  isNativeApp: vi.fn(() => true),
+}));
 vi.mock('./capabilities', () => ({ hasNativeFeature: vi.fn(() => true) }));
 vi.mock('./reportFailure', () => ({ reportNativeFailure: vi.fn() }));
 vi.mock('./trekShell', () => ({
@@ -405,3 +409,96 @@ describe('widgets set to a trip', () => {
     expect(JSON.parse(calls[2].json)).toEqual([{ id: 2, title: 'Trip 2', start: '2026-12-01', end: '2026-12-05' }]);
   });
 });
+
+describe('tripDayState navigate quick action', () => {
+  it('picks Apple Maps on iOS and geo: on Android when preferred_nav_app is unset', async () => {
+    const { isNativeIos, isNativeAndroid } = await import('./platform');
+    const { useSettingsStore } = await import('../store/settingsStore');
+    useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: '' } }));
+
+    const locatedDays = [
+      {
+        id: 1,
+        trip_id: 1,
+        day_number: 1,
+        date: '2026-11-06',
+        assignments: [
+          {
+            id: 10,
+            order_index: 0,
+            place: { name: 'Louvre', place_time: '10:00', lat: 48.8606, lng: 2.3376 },
+          },
+          {
+            id: 11,
+            order_index: 1,
+            place: { name: 'Mystery Stop', place_time: '14:00' },
+          },
+        ],
+      },
+    ] as unknown as Day[];
+
+    vi.mocked(isNativeIos).mockReturnValue(true);
+    vi.mocked(isNativeAndroid).mockReturnValue(false);
+    const iosToday = todayOf(trip(1, '2026-11-06', '2026-11-07'), locatedDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    expect(iosToday).not.toBeNull();
+    if (!iosToday) return;
+    expect(tripDayState(iosToday, 9 * 60, 'done', 'Navigate')).toMatchObject({
+      nextName: 'Louvre',
+      navigateUrl: 'https://maps.apple.com/?q=Louvre&ll=48.8606,2.3376',
+      navigateLabel: 'Navigate',
+    });
+
+    vi.mocked(isNativeIos).mockReturnValue(false);
+    vi.mocked(isNativeAndroid).mockReturnValue(true);
+    const androidToday = todayOf(trip(1, '2026-11-06', '2026-11-07'), locatedDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    expect(androidToday).not.toBeNull();
+    if (!androidToday) return;
+    expect(tripDayState(androidToday, 9 * 60, 'done', 'Navigate')).toMatchObject({
+      nextName: 'Louvre',
+      navigateUrl: 'geo:48.8606,2.3376?q=48.8606,2.3376(Louvre)',
+      navigateLabel: 'Navigate',
+    });
+
+    // Next stop has no location -> omit navigateUrl and navigateLabel
+    expect(tripDayState(androidToday, 11 * 60, 'done', 'Navigate').navigateUrl).toBeUndefined();
+    expect(tripDayState(androidToday, 11 * 60, 'done', 'Navigate').navigateLabel).toBeUndefined();
+
+    // All stops done -> omit navigateUrl and navigateLabel
+    expect(tripDayState(androidToday, 16 * 60, 'done', 'Navigate').navigateUrl).toBeUndefined();
+  });
+
+  it('respects preferred_nav_app when set in settings', async () => {
+    const { isNativeIos, isNativeAndroid } = await import('./platform');
+    const { useSettingsStore } = await import('../store/settingsStore');
+    vi.mocked(isNativeIos).mockReturnValue(true);
+    vi.mocked(isNativeAndroid).mockReturnValue(false);
+    useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: 'waze' } }));
+
+    const locatedDays = [
+      {
+        id: 1,
+        trip_id: 1,
+        day_number: 1,
+        date: '2026-11-06',
+        assignments: [
+          {
+            id: 10,
+            order_index: 0,
+            place: { name: 'Louvre', place_time: '10:00', lat: 48.8606, lng: 2.3376 },
+          },
+        ],
+      },
+    ] as unknown as Day[];
+
+    const today = todayOf(trip(1, '2026-11-06', '2026-11-07'), locatedDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    expect(today).not.toBeNull();
+    if (!today) return;
+    expect(tripDayState(today, 9 * 60, 'done', 'Navigate')).toMatchObject({
+      navigateUrl: 'https://waze.com/ul?q=Louvre&ll=48.8606,2.3376&navigate=yes',
+      navigateLabel: 'Navigate',
+    });
+
+    useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: '' } }));
+  });
+});
+

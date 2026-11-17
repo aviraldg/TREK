@@ -601,7 +601,9 @@ public class TrekShellPlugin extends Plugin {
             call.getInt("nextMinutes"),
             call.getInt("done", 0),
             call.getInt("total", 0),
-            colors
+            colors,
+            call.getString("navigateUrl"),
+            call.getString("navigateLabel")
         );
         boolean running = com.liketrek.trek.tripday.TripDayNotification.INSTANCE.show(getContext(), state);
         JSObject result = new JSObject();

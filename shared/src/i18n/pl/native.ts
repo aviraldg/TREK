@@ -126,6 +126,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': 'Jutro',
   'native.widget.nothingPlanned': 'Na dziś nic nie zaplanowano',
   'native.widget.dayDone': 'Na dziś wszystko zrobione',
+  'native.widget.navigate': 'Nawiguj',
   'native.widget.noBookings': 'Brak nadchodzących rezerwacji',
   'native.widget.noTodos': 'Wszystko zrobione',
   'native.widget.now': 'Teraz',

@@ -123,6 +123,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': 'Yarın',
   'native.widget.nothingPlanned': 'Bugün için plan yok',
   'native.widget.dayDone': 'Bugünlük her şey tamam',
+  'native.widget.navigate': 'Yol tarifi',
   'native.widget.noBookings': 'Yaklaşan rezervasyon yok',
   'native.widget.noTodos': 'Yapılacak bir şey kalmadı',
   'native.widget.now': 'Şimdi',
