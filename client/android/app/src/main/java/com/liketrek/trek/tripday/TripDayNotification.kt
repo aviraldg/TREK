@@ -48,6 +48,10 @@ object TripDayNotification {
         val total: Int,
         /** #rrggbb of each stop, for the segments; may be empty. */
         val colors: List<String?> = emptyList(),
+        /** Direct navigation URI/URL for the next stop, omitted when not navigable. */
+        val navigateUrl: String? = null,
+        /** Translated label for the "Navigate" quick action. */
+        val navigateLabel: String? = null,
     )
 
     fun ensureChannel(context: Context) {
