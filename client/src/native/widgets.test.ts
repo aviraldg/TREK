@@ -554,10 +554,16 @@ describe('tripDayState navigate quick action', () => {
     );
 
     // Google Maps preferred uses directions URL
-    const explicitGoogle = todayOf(trip(1, '2026-11-06', '2026-11-07'), louvreDays, '2026-11-06', (n, m) => `${n}/${m}`, {
-      time: (t) => t,
-      preferredNavApp: 'google',
-    });
+    const explicitGoogle = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      louvreDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      {
+        time: (t) => t,
+        preferredNavApp: 'google',
+      }
+    );
     expect(explicitGoogle).not.toBeNull();
     if (!explicitGoogle) return;
     expect(tripDayState(explicitGoogle, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
@@ -565,10 +571,16 @@ describe('tripDayState navigate quick action', () => {
     );
 
     // Apple Maps preferred uses directions URL
-    const explicitApple = todayOf(trip(1, '2026-11-06', '2026-11-07'), louvreDays, '2026-11-06', (n, m) => `${n}/${m}`, {
-      time: (t) => t,
-      preferredNavApp: 'apple',
-    });
+    const explicitApple = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      louvreDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      {
+        time: (t) => t,
+        preferredNavApp: 'apple',
+      }
+    );
     expect(explicitApple).not.toBeNull();
     if (!explicitApple) return;
     expect(tripDayState(explicitApple, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
@@ -594,7 +606,13 @@ describe('tripDayState navigate quick action', () => {
         ],
       },
     ] as unknown as Day[];
-    const androidAddr = todayOf(trip(1, '2026-11-06', '2026-11-07'), addressDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    const androidAddr = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      addressDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      (t) => t
+    );
     expect(androidAddr).not.toBeNull();
     if (!androidAddr) return;
     expect(tripDayState(androidAddr, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
@@ -620,7 +638,13 @@ describe('tripDayState navigate quick action', () => {
         ],
       },
     ] as unknown as Day[];
-    const iosLong = todayOf(trip(1, '2026-11-06', '2026-11-07'), longDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    const iosLong = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      longDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      (t) => t
+    );
     expect(iosLong).not.toBeNull();
     if (!iosLong) return;
     const navUrl = tripDayState(iosLong, 9 * 60, 'done', 'Navigate').navigateUrl;
