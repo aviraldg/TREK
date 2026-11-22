@@ -126,6 +126,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': 'Demà',
   'native.widget.nothingPlanned': 'Res planificat per avui',
   'native.widget.dayDone': 'Tot fet per avui',
+  'native.widget.navigate': 'Navega',
   'native.widget.noBookings': 'Cap reserva pendent',
   'native.widget.noTodos': 'No queda res per fer',
   'native.widget.now': 'Ara',

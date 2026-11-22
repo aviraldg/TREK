@@ -16,6 +16,10 @@ struct TripDayAttributes: ActivityAttributes {
         /// Stops behind, out of the day's stops.
         var done: Int
         var total: Int
+        /// Direct navigation URL for the next stop, omitted when not navigable.
+        var navigateUrl: String?
+        /// Translated label for the "Navigate" quick action.
+        var navigateLabel: String?
     }
 
     var tripTitle: String

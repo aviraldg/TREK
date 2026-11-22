@@ -116,6 +116,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': '明天',
   'native.widget.nothingPlanned': '今天没有安排',
   'native.widget.dayDone': '今天的行程已全部完成',
+  'native.widget.navigate': '导航',
   'native.widget.noBookings': '没有即将到来的预订',
   'native.widget.noTodos': '没有待办事项',
   'native.widget.now': '现在',

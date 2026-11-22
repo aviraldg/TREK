@@ -127,6 +127,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': 'Morgen',
   'native.widget.nothingPlanned': 'Niets gepland voor vandaag',
   'native.widget.dayDone': 'Alles gedaan voor vandaag',
+  'native.widget.navigate': 'Navigeer',
   'native.widget.noBookings': 'Geen komende boekingen',
   'native.widget.noTodos': 'Niets meer te doen',
   'native.widget.now': 'Nu',

@@ -10,13 +10,16 @@ struct TripDayLiveActivity: Widget {
             TripDayBanner(
                 tripTitle: context.attributes.tripTitle, dayLabel: context.state.dayLabel,
                 nextName: context.state.nextName, nextTime: context.state.nextTime,
-                done: context.state.done, total: context.state.total
+                done: context.state.done, total: context.state.total,
+                navigateUrl: safeNavigationUrl(context.state.navigateUrl),
+                navigateLabel: context.state.navigateLabel
             )
                 .activityBackgroundTint(Color(hex: 0x0C0C0F).opacity(0.92))
                 .activitySystemActionForegroundColor(.white)
                 .widgetURL(WidgetSnapshot.link(context.attributes.path))
         } dynamicIsland: { context in
             let state = context.state
+            let navUrl = safeNavigationUrl(state.navigateUrl)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
@@ -35,7 +38,22 @@ struct TripDayLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(state.nextName).font(.system(size: 17, weight: .heavy)).lineLimit(1)
-                        DayStopProgress(done: state.done, total: state.total)
+                        HStack(alignment: .center, spacing: 10) {
+                            DayStopProgress(done: state.done, total: state.total)
+                            if let navUrl {
+                                Link(destination: navUrl) {
+                                    Label(
+                                        state.navigateLabel?.isEmpty == false ? state.navigateLabel! : "Navigate",
+                                        systemImage: "arrow.triangle.turn.up.right.diamond.fill"
+                                    )
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Trek.confirmed.opacity(0.28), in: Capsule())
+                                }
+                            }
+                        }
                     }
                     .padding(.horizontal, 4)
                 }
@@ -57,5 +75,17 @@ struct TripDayLiveActivity: Widget {
             .widgetURL(WidgetSnapshot.link(context.attributes.path))
             .keylineTint(Trek.confirmed)
         }
+    }
+
+    private func safeNavigationUrl(_ raw: String?) -> URL? {
+        guard let raw, !raw.isEmpty, let target = URL(string: raw),
+              let scheme = target.scheme?.lowercased(), ["https", "http", "geo"].contains(scheme) else {
+            return nil
+        }
+        var components = URLComponents()
+        components.scheme = "com.liketrek.trek"
+        components.host = "open-nav"
+        components.queryItems = [URLQueryItem(name: "url", value: target.absoluteString)]
+        return components.url
     }
 }

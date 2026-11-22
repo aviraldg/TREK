@@ -125,6 +125,7 @@ const native: TranslationStrings = {
   'native.widget.tomorrow': '明日',
   'native.widget.nothingPlanned': '今日の予定はありません',
   'native.widget.dayDone': '今日の予定はすべて完了',
+  'native.widget.navigate': 'ナビゲート',
   'native.widget.noBookings': '今後の予約はありません',
   'native.widget.noTodos': 'やることはありません',
   'native.widget.now': '現在',

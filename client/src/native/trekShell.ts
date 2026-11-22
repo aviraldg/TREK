@@ -106,6 +106,10 @@ export interface TrekShellPlugin {
     nextMinutes?: number;
     /** Android: each stop's colour (#rrggbb) for the Live Update's segments. */
     colors?: (string | null)[];
+    /** Direct navigation URL/URI for the next stop, omitted when not navigable. */
+    navigateUrl?: string;
+    /** Translated label for the "Navigate" quick action. */
+    navigateLabel?: string;
   }): Promise<{ running: boolean }>;
   endTripDay(): Promise<void>;
   /** Feature storeKit (iOS) or playBilling (Android): the store's price strings for the products it knows. */
