@@ -1,6 +1,6 @@
-import type { AssignmentPlace, Day, Reservation, Trip } from '../types';
 import { getNavigationTargets } from '../components/Planner/placeNavigation';
 import { useSettingsStore } from '../store/settingsStore';
+import type { AssignmentPlace, Day, Reservation, Trip } from '../types';
 import { getFlightLegs, getTrainLegs, usesStationRoute } from '../utils/flightLegs';
 import { splitReservationDateTime } from '../utils/formatters';
 import { heroTrip, sortTripsByRelevance } from '../utils/heroTrip';
@@ -194,10 +194,7 @@ function hasPlaceLocation(place: AssignmentPlace): boolean {
   return Boolean(place.address?.trim() || place.google_place_id?.trim() || place.google_ftid?.trim());
 }
 
-function fallbackNavUrl(
-  place: AssignmentPlace,
-  targets: ReturnType<typeof getNavigationTargets>
-): string | undefined {
+function fallbackNavUrl(place: AssignmentPlace, targets: ReturnType<typeof getNavigationTargets>): string | undefined {
   if (isNativeAndroid()) {
     const geo = targets.find((t) => t.id === 'geo');
     if (geo) return geo.url;
@@ -225,12 +222,13 @@ function fallbackNavUrl(
  * Resolves the single-tap navigation URL for a stop, respecting `preferred_nav_app`
  * and falling back to `geo:` on Android and Apple Maps on iOS.
  */
-export function stopNavigateUrl(
+function stopNavigateUrl(
   place: AssignmentPlace | null | undefined,
   preferredNavApp?: string | null
 ): string | undefined {
   if (!place || !hasPlaceLocation(place)) return undefined;
-  const preferred = preferredNavApp !== undefined ? preferredNavApp : useSettingsStore.getState().settings.preferred_nav_app;
+  const preferred =
+    preferredNavApp !== undefined ? preferredNavApp : useSettingsStore.getState().settings.preferred_nav_app;
   const targets = getNavigationTargets(place);
   if (targets.length === 0) return undefined;
   if (preferred) {
@@ -398,12 +396,7 @@ interface TripDayState {
  * The Live Activity's state: the first stop still ahead or still under way (a
  * flight in the air until it lands), else the last.
  */
-export function tripDayState(
-  day: TripDay,
-  nowMinutes: number,
-  allDone: string,
-  navigateLabel?: string
-): TripDayState {
+export function tripDayState(day: TripDay, nowMinutes: number, allDone: string, navigateLabel?: string): TripDayState {
   const timed = day.stops.filter((s) => s.minutes != null);
   const nextIndex = day.stops.findIndex(
     (s) => s.minutes != null && (s.minutes >= nowMinutes || (s.endMinutes != null && s.endMinutes > nowMinutes))

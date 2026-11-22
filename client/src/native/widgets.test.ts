@@ -439,7 +439,13 @@ describe('tripDayState navigate quick action', () => {
 
     vi.mocked(isNativeIos).mockReturnValue(true);
     vi.mocked(isNativeAndroid).mockReturnValue(false);
-    const iosToday = todayOf(trip(1, '2026-11-06', '2026-11-07'), locatedDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    const iosToday = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      locatedDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      (t) => t
+    );
     expect(iosToday).not.toBeNull();
     if (!iosToday) return;
     expect(tripDayState(iosToday, 9 * 60, 'done', 'Navigate')).toMatchObject({
@@ -450,7 +456,13 @@ describe('tripDayState navigate quick action', () => {
 
     vi.mocked(isNativeIos).mockReturnValue(false);
     vi.mocked(isNativeAndroid).mockReturnValue(true);
-    const androidToday = todayOf(trip(1, '2026-11-06', '2026-11-07'), locatedDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    const androidToday = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      locatedDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      (t) => t
+    );
     expect(androidToday).not.toBeNull();
     if (!androidToday) return;
     expect(tripDayState(androidToday, 9 * 60, 'done', 'Navigate')).toMatchObject({
@@ -490,7 +502,13 @@ describe('tripDayState navigate quick action', () => {
       },
     ] as unknown as Day[];
 
-    const today = todayOf(trip(1, '2026-11-06', '2026-11-07'), locatedDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    const today = todayOf(
+      trip(1, '2026-11-06', '2026-11-07'),
+      locatedDays,
+      '2026-11-06',
+      (n, m) => `${n}/${m}`,
+      (t) => t
+    );
     expect(today).not.toBeNull();
     if (!today) return;
     expect(tripDayState(today, 9 * 60, 'done', 'Navigate')).toMatchObject({
@@ -501,4 +519,3 @@ describe('tripDayState navigate quick action', () => {
     useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: '' } }));
   });
 });
-
