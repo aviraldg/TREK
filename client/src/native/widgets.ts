@@ -1,5 +1,5 @@
 import type { AssignmentPlace, Day, Reservation, Trip } from '../types';
-import { getNavigationTargets } from '../utils/placeNavigation';
+import { getNavigationTargets } from '../components/Planner/placeNavigation';
 import { useSettingsStore } from '../store/settingsStore';
 import { getFlightLegs, getTrainLegs, usesStationRoute } from '../utils/flightLegs';
 import { splitReservationDateTime } from '../utils/formatters';
