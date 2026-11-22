@@ -122,7 +122,7 @@ export function preferredNavAppOptions(t: Translate): { value: string; label: st
   ]
 }
 
-function allNavigationTargets(
+export function allNavigationTargets(
   place: PlaceLike | null | undefined,
   detailsUrl?: string | null,
 ): NavigationTarget[] {

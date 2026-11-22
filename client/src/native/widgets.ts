@@ -1,4 +1,4 @@
-import { getNavigationTargets } from '../components/Planner/placeNavigation';
+import { allNavigationTargets, type NavigationTarget } from '../components/Planner/placeNavigation';
 import { useSettingsStore } from '../store/settingsStore';
 import type { AssignmentPlace, Day, Reservation, Trip } from '../types';
 import { getFlightLegs, getTrainLegs, usesStationRoute } from '../utils/flightLegs';
@@ -189,38 +189,84 @@ export function mergeByTime<T extends { minutes?: number | null }>(stops: T[], b
   return out;
 }
 
+const MAX_NAV_URL_LEN = 1024;
+const MAX_NAV_QUERY_ENCODED_LEN = 512;
+
 function hasPlaceLocation(place: AssignmentPlace): boolean {
   if (place.lat != null && place.lng != null) return true;
   return Boolean(place.address?.trim() || place.google_place_id?.trim() || place.google_ftid?.trim());
 }
 
-function fallbackNavUrl(place: AssignmentPlace, targets: ReturnType<typeof getNavigationTargets>): string | undefined {
+/** Encodes `raw` to fit within `maxEncodedLen` bytes/chars without splitting surrogate pairs or percent escapes. */
+function boundedEncode(raw: string, maxEncodedLen = MAX_NAV_QUERY_ENCODED_LEN): string {
+  const trimmed = raw.trim();
+  if (encodeURIComponent(trimmed).length <= maxEncodedLen) return encodeURIComponent(trimmed);
+  let out = '';
+  for (const ch of trimmed) {
+    const next = out + ch;
+    if (encodeURIComponent(next).length > maxEncodedLen) break;
+    out = next;
+  }
+  return encodeURIComponent(out);
+}
+
+function appleDirectionsUrl(place: AssignmentPlace): string | undefined {
+  if (place.lat != null && place.lng != null) {
+    return `https://maps.apple.com/?daddr=${place.lat},${place.lng}`;
+  }
+  const address = place.address?.trim();
+  if (address) return `https://maps.apple.com/?daddr=${boundedEncode(address)}`;
+  return undefined;
+}
+
+function googleDirectionsUrl(place: AssignmentPlace): string | undefined {
+  const placeId = place.google_place_id?.trim();
+  const pidParam = placeId ? `&destination_place_id=${encodeURIComponent(placeId)}` : '';
+  if (place.lat != null && place.lng != null) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}${pidParam}`;
+  }
+  const name = place.name?.trim();
+  if (placeId && name) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${boundedEncode(name)}${pidParam}`;
+  }
+  const address = place.address?.trim();
+  if (address) {
+    const query = name ? `${name}, ${address}` : address;
+    return `https://www.google.com/maps/dir/?api=1&destination=${boundedEncode(query)}`;
+  }
+  return undefined;
+}
+
+function androidGeoUrl(place: AssignmentPlace): string | undefined {
+  if (place.lat != null && place.lng != null) {
+    const name = place.name?.trim();
+    const label = name ? `(${boundedEncode(name, 256)})` : '';
+    return `geo:${place.lat},${place.lng}?q=${place.lat},${place.lng}${label}`;
+  }
+  const address = place.address?.trim();
+  if (address) return `geo:0,0?q=${boundedEncode(address)}`;
+  return undefined;
+}
+
+function directionsUrlForTarget(place: AssignmentPlace, target: NavigationTarget): string {
+  if (target.id === 'apple') return appleDirectionsUrl(place) ?? target.url;
+  if (target.id === 'google') return googleDirectionsUrl(place) ?? target.url;
+  return target.url;
+}
+
+function fallbackNavUrl(place: AssignmentPlace, targets: NavigationTarget[]): string | undefined {
   if (isNativeAndroid()) {
-    const geo = targets.find((t) => t.id === 'geo');
-    if (geo) return geo.url;
-    if (place.lat != null && place.lng != null) {
-      const name = place.name?.trim();
-      const label = name ? `(${encodeURIComponent(name)})` : '';
-      return `geo:${place.lat},${place.lng}?q=${place.lat},${place.lng}${label}`;
-    }
+    return androidGeoUrl(place) ?? directionsUrlForTarget(place, targets[0]);
   }
   if (isNativeIos()) {
-    if (place.lat != null && place.lng != null) {
-      return `https://maps.apple.com/?daddr=${place.lat},${place.lng}`;
-    }
-    const address = place.address?.trim();
-    if (address) {
-      return `https://maps.apple.com/?daddr=${encodeURIComponent(address)}`;
-    }
-    const apple = targets.find((t) => t.id === 'apple');
-    if (apple) return apple.url;
+    return appleDirectionsUrl(place) ?? directionsUrlForTarget(place, targets[0]);
   }
-  return targets[0]?.url;
+  return directionsUrlForTarget(place, targets[0]);
 }
 
 /**
  * Resolves the single-tap navigation URL for a stop, respecting `preferred_nav_app`
- * and falling back to `geo:` on Android and Apple Maps on iOS.
+ * and falling back to `geo:` on Android and Apple Maps directions on iOS.
  */
 function stopNavigateUrl(
   place: AssignmentPlace | null | undefined,
@@ -229,13 +275,15 @@ function stopNavigateUrl(
   if (!place || !hasPlaceLocation(place)) return undefined;
   const preferred =
     preferredNavApp !== undefined ? preferredNavApp : useSettingsStore.getState().settings.preferred_nav_app;
-  const targets = getNavigationTargets(place);
+  const targets = allNavigationTargets(place);
   if (targets.length === 0) return undefined;
+  let url: string | undefined;
   if (preferred) {
     const match = targets.find((t) => t.id === preferred);
-    if (match) return match.url;
+    if (match) url = directionsUrlForTarget(place, match);
   }
-  return fallbackNavUrl(place, targets);
+  if (!url) url = fallbackNavUrl(place, targets);
+  return url && url.length <= MAX_NAV_URL_LEN ? url : undefined;
 }
 
 /** Today's day of the trip with its stops in plan order, if the trip runs today. */

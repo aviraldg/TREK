@@ -518,4 +518,114 @@ describe('tripDayState navigate quick action', () => {
 
     useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: '' } }));
   });
+
+  it('honors explicit preferredNavApp over store, uses directions URLs, handles address-only Android, and bounds URL length', async () => {
+    const { isNativeIos, isNativeAndroid } = await import('./platform');
+    const { useSettingsStore } = await import('../store/settingsStore');
+
+    const louvreDays = [
+      {
+        id: 1,
+        trip_id: 1,
+        day_number: 1,
+        date: '2026-11-06',
+        assignments: [
+          {
+            id: 10,
+            order_index: 0,
+            place: { name: 'Louvre', place_time: '10:00', lat: 48.8606, lng: 2.3376 },
+          },
+        ],
+      },
+    ] as unknown as Day[];
+
+    // Explicit preferredNavApp ('waze') overrides store ('apple')
+    vi.mocked(isNativeIos).mockReturnValue(true);
+    vi.mocked(isNativeAndroid).mockReturnValue(false);
+    useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: 'apple' } }));
+    const explicitWaze = todayOf(trip(1, '2026-11-06', '2026-11-07'), louvreDays, '2026-11-06', (n, m) => `${n}/${m}`, {
+      time: (t) => t,
+      preferredNavApp: 'waze',
+    });
+    expect(explicitWaze).not.toBeNull();
+    if (!explicitWaze) return;
+    expect(tripDayState(explicitWaze, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
+      'https://waze.com/ul?q=Louvre&ll=48.8606,2.3376&navigate=yes'
+    );
+
+    // Google Maps preferred uses directions URL
+    const explicitGoogle = todayOf(trip(1, '2026-11-06', '2026-11-07'), louvreDays, '2026-11-06', (n, m) => `${n}/${m}`, {
+      time: (t) => t,
+      preferredNavApp: 'google',
+    });
+    expect(explicitGoogle).not.toBeNull();
+    if (!explicitGoogle) return;
+    expect(tripDayState(explicitGoogle, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
+      'https://www.google.com/maps/dir/?api=1&destination=48.8606,2.3376'
+    );
+
+    // Apple Maps preferred uses directions URL
+    const explicitApple = todayOf(trip(1, '2026-11-06', '2026-11-07'), louvreDays, '2026-11-06', (n, m) => `${n}/${m}`, {
+      time: (t) => t,
+      preferredNavApp: 'apple',
+    });
+    expect(explicitApple).not.toBeNull();
+    if (!explicitApple) return;
+    expect(tripDayState(explicitApple, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
+      'https://maps.apple.com/?daddr=48.8606,2.3376'
+    );
+
+    // Address-only Android fallback uses geo:0,0?q=...
+    useSettingsStore.setState((s) => ({ settings: { ...s.settings, preferred_nav_app: '' } }));
+    vi.mocked(isNativeIos).mockReturnValue(false);
+    vi.mocked(isNativeAndroid).mockReturnValue(true);
+    const addressDays = [
+      {
+        id: 1,
+        trip_id: 1,
+        day_number: 1,
+        date: '2026-11-06',
+        assignments: [
+          {
+            id: 10,
+            order_index: 0,
+            place: { name: 'Cafe', place_time: '10:00', address: '10 Rue de Rivoli, Paris' },
+          },
+        ],
+      },
+    ] as unknown as Day[];
+    const androidAddr = todayOf(trip(1, '2026-11-06', '2026-11-07'), addressDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    expect(androidAddr).not.toBeNull();
+    if (!androidAddr) return;
+    expect(tripDayState(androidAddr, 9 * 60, 'done', 'Navigate').navigateUrl).toBe(
+      'geo:0,0?q=10%20Rue%20de%20Rivoli%2C%20Paris'
+    );
+
+    // Long CJK address on iOS is bounded well under 4 KB Live Activity limit
+    vi.mocked(isNativeIos).mockReturnValue(true);
+    vi.mocked(isNativeAndroid).mockReturnValue(false);
+    const longCjk = '東京都渋谷区'.repeat(100);
+    const longDays = [
+      {
+        id: 1,
+        trip_id: 1,
+        day_number: 1,
+        date: '2026-11-06',
+        assignments: [
+          {
+            id: 10,
+            order_index: 0,
+            place: { name: 'Shibuya', place_time: '10:00', address: longCjk },
+          },
+        ],
+      },
+    ] as unknown as Day[];
+    const iosLong = todayOf(trip(1, '2026-11-06', '2026-11-07'), longDays, '2026-11-06', (n, m) => `${n}/${m}`, (t) => t);
+    expect(iosLong).not.toBeNull();
+    if (!iosLong) return;
+    const navUrl = tripDayState(iosLong, 9 * 60, 'done', 'Navigate').navigateUrl;
+    expect(navUrl).toBeDefined();
+    expect(navUrl?.startsWith('https://maps.apple.com/?daddr=')).toBe(true);
+    expect((navUrl ?? '').length).toBeLessThanOrEqual(1024);
+  });
 });
