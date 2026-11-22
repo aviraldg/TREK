@@ -1,5 +1,5 @@
 import type { AssignmentPlace, Day, Reservation, Trip } from '../types';
-import { getNavigationTargets } from '../components/Planner/placeNavigation';
+import { getNavigationTargets } from '../utils/placeNavigation';
 import { useSettingsStore } from '../store/settingsStore';
 import { getFlightLegs, getTrainLegs, usesStationRoute } from '../utils/flightLegs';
 import { splitReservationDateTime } from '../utils/formatters';
@@ -208,6 +208,13 @@ function fallbackNavUrl(
     }
   }
   if (isNativeIos()) {
+    if (place.lat != null && place.lng != null) {
+      return `https://maps.apple.com/?daddr=${place.lat},${place.lng}`;
+    }
+    const address = place.address?.trim();
+    if (address) {
+      return `https://maps.apple.com/?daddr=${encodeURIComponent(address)}`;
+    }
     const apple = targets.find((t) => t.id === 'apple');
     if (apple) return apple.url;
   }

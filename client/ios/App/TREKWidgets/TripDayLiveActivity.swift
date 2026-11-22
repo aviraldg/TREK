@@ -78,10 +78,14 @@ struct TripDayLiveActivity: Widget {
     }
 
     private func safeNavigationUrl(_ raw: String?) -> URL? {
-        guard let raw, !raw.isEmpty, let url = URL(string: raw),
-              let scheme = url.scheme?.lowercased(), ["https", "http", "geo"].contains(scheme) else {
+        guard let raw, !raw.isEmpty, let target = URL(string: raw),
+              let scheme = target.scheme?.lowercased(), ["https", "http", "geo"].contains(scheme) else {
             return nil
         }
-        return url
+        var components = URLComponents()
+        components.scheme = "com.liketrek.trek"
+        components.host = "open-nav"
+        components.queryItems = [URLQueryItem(name: "url", value: target.absoluteString)]
+        return components.url
     }
 }

@@ -17,6 +17,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         for context in connectionOptions.urlContexts where context.url.isFileURL {
             TrekSharedFiles.receive(context.url)
         }
+        let launchNavTargets = connectionOptions.urlContexts.compactMap { externalNavigationUrl(from: $0.url) }
+        for target in launchNavTargets {
+            DispatchQueue.main.async { UIApplication.shared.open(target) }
+        }
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
@@ -40,8 +44,27 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // com.liketrek.trek://share: the share sheet left an item for the import.
         let handoffs = URLContexts.filter { $0.url.scheme == "com.liketrek.trek" && $0.url.host == "share" }
         if !handoffs.isEmpty { TrekSharedFiles.receiveFromShareExtension() }
-        let others = URLContexts.subtracting(files).subtracting(handoffs)
+        // com.liketrek.trek://open-nav?url=...: Live Activity Navigate link for an external map app.
+        let navContexts = URLContexts.filter { externalNavigationUrl(from: $0.url) != nil }
+        for context in navContexts {
+            if let target = externalNavigationUrl(from: context.url) {
+                UIApplication.shared.open(target)
+            }
+        }
+        let others = URLContexts.subtracting(files).subtracting(handoffs).subtracting(navContexts)
         if !others.isEmpty { SceneDelegateProxy.shared.scene(scene, openURLContexts: others) }
+    }
+
+    private func externalNavigationUrl(from url: URL) -> URL? {
+        guard url.scheme == "com.liketrek.trek", url.host == "open-nav",
+              let raw = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "url" })?.value,
+              let target = URL(string: raw),
+              let scheme = target.scheme?.lowercased(),
+              ["https", "http", "geo"].contains(scheme) else {
+            return nil
+        }
+        return target
     }
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {

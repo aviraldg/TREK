@@ -444,7 +444,7 @@ describe('tripDayState navigate quick action', () => {
     if (!iosToday) return;
     expect(tripDayState(iosToday, 9 * 60, 'done', 'Navigate')).toMatchObject({
       nextName: 'Louvre',
-      navigateUrl: 'https://maps.apple.com/?q=Louvre&ll=48.8606,2.3376',
+      navigateUrl: 'https://maps.apple.com/?daddr=48.8606,2.3376',
       navigateLabel: 'Navigate',
     });
 
